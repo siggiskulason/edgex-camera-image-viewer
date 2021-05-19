@@ -1,0 +1,18 @@
+<html>
+<script>
+window.onload = function() {
+    var image = document.getElementById("img");
+
+    function updateImage() {
+        image.src = image.src.split("?")[0] + "?" + new Date().getTime();
+    }
+
+    setInterval(updateImage, 1000);
+}
+
+</script>
+
+<body>
+<img id="img" src="image.jpeg" style="position:absolute;top:0;left:0;height:100%;width:100%"/>
+</body>
+</html>
