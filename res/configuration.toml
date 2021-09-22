@@ -1,20 +1,39 @@
 [Writable]
-LogLevel = 'INFO'
-    [Writable.StoreAndForward]
-    Enabled = false
-    RetryInterval = '5m'
-    MaxRetryCount = 10
+LogLevel = "INFO"
+  [Writable.StoreAndForward]
+  Enabled = false
+  RetryInterval = "5m"
+  MaxRetryCount = 10
+  [Writable.InsecureSecrets]
+    [Writable.InsecureSecrets.DB]
+    path = "redisdb"
+      [Writable.InsecureSecrets.DB.Secrets]
+      username = ""
+      password = ""
+
+
+[SecretStore]
+Type = "vault"
+Host = "localhost"
+Port = 8200
+Path = "app-rules-engine/"
+Protocol = "http"
+RootCaCertPath = ""
+ServerName = ""
+TokenFile = "/tmp/secrets-token.json"
+  [SecretStore.Authentication]
+  AuthType = "X-Vault-Token"
 
 [Service]
-BootTimeout = '30s'
-ClientMonitor = '15s'
-CheckInterval = '1s'
-Host = 'localhost'
-Port = 48095
-Protocol = 'http'
-ReadMaxLimit = 100
-StartupMsg = 'device-camera image filter'
-Timeout = '30s'
+HealthCheckInterval = "10s"
+Host = "localhost"
+Port = 59795
+ServerBindAddr = "" 
+StartupMsg = "Camera image viewer Service started"
+RequestTimeout = "30s"
+MaxRequestSize = 0
+MaxResultCount = 0
+Timeout = "30s"
 
 [Registry]
 Host = 'localhost'
@@ -30,38 +49,34 @@ Type = "redisdb"
 Host = "localhost"
 Port = 6379
 Timeout = "30s"
-Username = ""
-Password = ""
 
 [Clients]
-  [Clients.CoreData]
-  Protocol = 'http'
-  Host = 'localhost'
-  Port = 48080
-
-  [Clients.Logging]
+  [Clients.core-metadata]
   Protocol = "http"
   Host = "localhost"
-  Port = 48061
-
-[MessageBus]
-Type = 'zero'
-    [MessageBus.PublishHost]
-        Host = '*'
-        Port = 5564
-        Protocol = 'tcp'
-    [MessageBus.SubscribeHost]
-        Host = 'localhost'
-        Port = 5563
-        Protocol = 'tcp'
+  Port = 59881
   
-[Binding]
-Type="messagebus"
-SubscribeTopic="events"
-PublishTopic="somewhere"
+[Trigger]
+Type="edgex-messagebus"
+  [Trigger.EdgexMessageBus]
+  Type = "redis"
+    [Trigger.EdgexMessageBus.SubscribeHost]
+    Host = "localhost"
+    Port = 6379
+    Protocol = "redis"
+    SubscribeTopics="edgex/events/#"
+    [Trigger.EdgexMessageBus.PublishHost]
+    Host = "localhost"
+    Port = 6379
+    Protocol = "redis"
+    PublishTopic="example"
+    [Trigger.EdgexMessageBus.Optional]
+    authmode = "usernamepassword"  # requied for redis messagebus (secure or insecure).
+    secretname = "redisdb"
+ 
 
 [ApplicationSettings]
-ValueDescriptors = "onvif_snapshot"
+ResourceNames = "OnvifSnapshot"
 
 
 

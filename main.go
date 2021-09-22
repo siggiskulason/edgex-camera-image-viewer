@@ -11,48 +11,54 @@ import (
 	"os"
 	"time"
 
-	"github.com/edgexfoundry/app-functions-sdk-go/appcontext"
-	"github.com/edgexfoundry/app-functions-sdk-go/appsdk"
-	"github.com/edgexfoundry/app-functions-sdk-go/pkg/transforms"
-	"github.com/edgexfoundry/go-mod-core-contracts/models"
+	"github.com/edgexfoundry/app-functions-sdk-go/v2/pkg"
+	"github.com/edgexfoundry/app-functions-sdk-go/v2/pkg/interfaces"
+	"github.com/edgexfoundry/app-functions-sdk-go/v2/pkg/transforms"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/dtos"
 )
 
 func main() {
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()
 
-	edgexSdk := &appsdk.AppFunctionsSDK{ServiceKey: "CborToJpegImageViewer"}
-
-	if err := edgexSdk.Initialize(); err != nil {
-		edgexSdk.LoggingClient.Error(fmt.Sprintf("SDK initialization failed: %v\n", err))
+	service, ok := pkg.NewAppService("CborToJpegImageViewer")
+	if !ok {
 		exitCode = -1
 		return
 	}
-
-	valueDescriptors, err := edgexSdk.GetAppSettingStrings("ValueDescriptors")
+	lc := service.LoggingClient()
+	resourceNames, err := service.GetAppSettingStrings("ResourceNames")
 	if err != nil {
-		edgexSdk.LoggingClient.Error(err.Error())
+		lc.Errorf("GetAppSettingStrings returned error: %v", err.Error())
 		exitCode = -1
 		return
+
 	}
 
-	edgexSdk.SetFunctionsPipeline(
-		transforms.NewFilter(valueDescriptors).FilterByValueDescriptor, processImages)
+	if err := service.SetFunctionsPipeline(
+		transforms.NewFilterFor(resourceNames).FilterByResourceName,
+		processImages,
+	); err != nil {
+		lc.Errorf("SetFunctionsPipeline returned error: %v ", err.Error())
+		exitCode = -1
+		return
 
-	err = edgexSdk.MakeItRun()
+	}
+
+	err = service.MakeItRun()
 	if err != nil {
-		edgexSdk.LoggingClient.Error("MakeItRun returned error: ", err.Error())
+		lc.Errorf("MakeItRun returned error: %v", err.Error())
 		exitCode = -1
 		return
 	}
 
 }
 
-func processImages(edgexcontext *appcontext.Context, params ...interface{}) (bool, interface{}) {
+func processImages(edgexcontext interfaces.AppFunctionContext, params interface{}) (bool, interface{}) {
 
-	if len(params) >= 1 {
+	if params != nil {
 
-		event, ok := params[0].(models.Event)
+		event, ok := params.(dtos.Event)
 		if !ok {
 			return false, errors.New("processImages didn't receive models.Event")
 		}
@@ -70,7 +76,7 @@ func processImages(edgexcontext *appcontext.Context, params ...interface{}) (boo
 			fmt.Print(time.Now().Format("2006-01-02 15:04:05"))
 
 			fmt.Printf(": EdgeX device-camera image received from: %s, ReadingName: %s, Type: %s, Size: %s\n",
-				reading.Device, reading.Name, imageType, imageData.Bounds().Size().String())
+				reading.DeviceName, reading.ResourceName, imageType, imageData.Bounds().Size().String())
 		}
 	}
 
